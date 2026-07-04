@@ -47,21 +47,45 @@ export default function HeroSection() {
           <Sparkles className="w-4 h-4 text-accent" />
           Более 25 лет заботимся о вашей улыбке
         </motion.div>
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="flex justify-center"
-        >
-          <Image
-            src="/images/logo.png"
-            alt="Дом Стоматологии"
-            width={413}
-            height={96}
-            className="h-14 md:h-20 lg:h-24 w-auto brightness-0 invert drop-shadow-lg"
-            priority
+        <h1 className="relative flex justify-center">
+          {/* Glow behind logo */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.3 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.4, delay: 0.1, ease: "easeOut" }}
+            className="absolute inset-0 -m-24 bg-gradient-to-r from-primary/25 via-accent/20 to-primary/25 rounded-full blur-[120px]"
           />
-        </motion.h1>
+          {/* Logo entrance */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.75, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{
+              duration: 0.9,
+              delay: 0.2,
+              ease: [0.34, 1.56, 0.64, 1],
+            }}
+          >
+            {/* Gentle float after entrance */}
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{
+                repeat: Infinity,
+                duration: 4,
+                ease: "easeInOut",
+                delay: 1.5,
+              }}
+            >
+              <Image
+                src="/images/logo.png"
+                alt="Дом Стоматологии"
+                width={413}
+                height={96}
+                className="h-14 md:h-20 lg:h-24 w-auto brightness-0 invert drop-shadow-xl"
+                priority
+              />
+            </motion.div>
+          </motion.div>
+        </h1>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
