@@ -22,7 +22,7 @@ interface ButtonProps {
 
 const variantClasses = {
   primary:
-    "bg-primary text-white hover:bg-primary-dark shadow-sm hover:shadow-md",
+    "bg-primary text-white hover:bg-primary-dark shadow-sm hover:shadow-md hover:shadow-primary/20",
   secondary:
     "bg-background-alt text-text-primary hover:bg-border",
   outline:
@@ -30,7 +30,7 @@ const variantClasses = {
   ghost:
     "text-text-secondary hover:text-text-primary hover:bg-background-alt",
   accent:
-    "bg-accent text-text-primary hover:bg-accent-light font-semibold shadow-sm",
+    "bg-accent text-white hover:bg-accent-light font-semibold shadow-sm hover:shadow-md hover:shadow-accent/20",
 };
 
 const sizeClasses = {

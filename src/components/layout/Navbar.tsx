@@ -39,9 +39,9 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           isScrolled
-            ? "bg-white/90 backdrop-blur-md shadow-sm"
+            ? "glass border-b border-border/50 shadow-sm"
             : "bg-transparent"
         }`}
       >
@@ -52,15 +52,15 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1 bg-white/50 backdrop-blur-sm rounded-full px-2 py-1.5 border border-border/40">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   pathname === item.href
-                    ? "text-primary bg-primary/5"
-                    : "text-text-secondary hover:text-text-primary hover:bg-background-alt"
+                    ? "text-white bg-primary shadow-sm"
+                    : "text-text-secondary hover:text-text-primary hover:bg-white/80"
                 }`}
               >
                 {item.label}
@@ -82,14 +82,14 @@ export default function Navbar() {
             </Button>
             <button
               onClick={() => setIsMobileOpen(!isMobileOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-background-alt transition-colors"
+              className="lg:hidden p-2.5 rounded-full bg-white/80 backdrop-blur-sm border border-border/40 hover:bg-white transition-colors shadow-sm"
               aria-label={isMobileOpen ? "Закрыть меню" : "Открыть меню"}
               aria-expanded={isMobileOpen}
             >
               {isMobileOpen ? (
-                <X className="w-6 h-6 text-text-primary" />
+                <X className="w-5 h-5 text-text-primary" />
               ) : (
-                <Menu className="w-6 h-6 text-text-primary" />
+                <Menu className="w-5 h-5 text-text-primary" />
               )}
             </button>
           </div>
@@ -118,7 +118,7 @@ export default function Navbar() {
                     href={item.href}
                     className={`block px-4 py-3 rounded-xl text-lg font-medium transition-colors ${
                       pathname === item.href
-                        ? "text-primary bg-primary/5"
+                        ? "text-primary bg-primary-soft"
                         : "text-text-primary hover:bg-background-alt"
                     }`}
                   >

@@ -6,8 +6,11 @@ import Logo from "@/components/icons/Logo";
 
 export default function Footer() {
   return (
-    <footer className="bg-text-primary text-white">
-      <div className="container-custom section-padding">
+    <footer className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden">
+      {/* Decorative gradient blob */}
+      <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="container-custom section-padding relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div>
@@ -84,14 +87,14 @@ export default function Footer() {
               </a>
             </div>
           </div>
-        </div>
-
-        {/* Bottom bar */}
+        </div>          {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-white/40">
           <p>© {new Date().getFullYear()} «Дом Стоматологии». Все права защищены.</p>
-          <Link href="/privacy" className="hover:text-white transition-colors">
-            Политика конфиденциальности
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/privacy" className="hover:text-white transition-colors">
+              Политика конфиденциальности
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

@@ -31,12 +31,14 @@ export default function ServiceCard({
     >
       <Link
         href={href}
-        className={`block rounded-2xl bg-white p-6 shadow-card hover:shadow-card-hover transition-shadow duration-300 h-full`}
+        className="group block rounded-2xl bg-white p-6 shadow-card hover:shadow-card-hover transition-all duration-300 h-full border border-border/50 hover:border-primary/20 relative overflow-hidden"
       >
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-4">
+        {/* Subtle gradient accent on hover */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-primary mb-4 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
           {icon}
         </div>
-        <h3 className="text-lg font-semibold text-text-primary mb-2">{title}</h3>
+        <h3 className="text-lg font-semibold text-text-primary mb-2 group-hover:text-primary transition-colors duration-200">{title}</h3>
         <p className="text-sm text-text-secondary leading-relaxed mb-4 line-clamp-3">
           {description}
         </p>
@@ -50,9 +52,9 @@ export default function ServiceCard({
             ))}
           </ul>
         )}
-        <span className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:gap-2 transition-all">
+        <span className="inline-flex items-center gap-1 text-sm font-medium text-primary group-hover:gap-2 transition-all">
           Подробнее
-          <ArrowUp className="w-4 h-4 rotate-45" />
+          <ArrowUp className="w-4 h-4 rotate-45 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
         </span>
       </Link>
     </motion.div>

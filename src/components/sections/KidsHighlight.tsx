@@ -23,7 +23,7 @@ export default function KidsHighlight() {
           </ScrollReveal>
           <ScrollReveal direction="right" delay={0.2}>
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-medium mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-accent/15 to-accent/5 text-accent text-sm font-medium mb-4 border border-accent/10">
                 <Baby className="w-4 h-4" />
                 Для детей
               </div>

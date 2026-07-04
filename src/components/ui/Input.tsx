@@ -25,8 +25,8 @@ export default function Input({
     w-full px-4 py-3 rounded-xl border
     bg-surface text-text-primary placeholder-text-muted
     transition-all duration-200
-    focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
-    ${error ? "border-error" : "border-border"}
+    focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/60 focus:bg-white
+    ${error ? "border-error focus:ring-error/20 focus:border-error hover:border-error/60" : "border-border hover:border-primary/40"}
     ${className}
   `;
 

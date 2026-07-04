@@ -29,7 +29,7 @@ export default function DoctorCard({
     >
       <Link
         href={`/doctors/${slug}`}
-        className="group block rounded-2xl bg-white shadow-card hover:shadow-card-hover transition-shadow duration-300 overflow-hidden h-full"
+        className="group block rounded-2xl bg-white shadow-card hover:shadow-card-hover transition-all duration-300 overflow-hidden h-full border border-border/50 hover:border-primary/20"
       >
         <div className="relative aspect-[4/5] overflow-hidden">
           <Image
@@ -39,9 +39,11 @@ export default function DoctorCard({
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
+          {/* Gradient overlay on hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
         <div className="p-4">
-          <h3 className="font-semibold text-text-primary text-sm leading-tight mb-1">
+          <h3 className="font-semibold text-text-primary text-sm leading-tight mb-1 group-hover:text-primary transition-colors">
             {name}
           </h3>
           <p className="text-xs text-text-secondary mb-1">{specialization}</p>

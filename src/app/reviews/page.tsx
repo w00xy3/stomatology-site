@@ -32,8 +32,8 @@ export default function ReviewsPage() {
       <section className="section-padding">
         <div className="container-custom">
           <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {visibleReviews.map((review, i) => (
-              <StaggerItem key={i}>
+            {visibleReviews.map((review) => (
+              <StaggerItem key={`${review.authorName}-${review.date}-${review.text.slice(0, 20)}`}>
                 <ReviewCard
                   authorName={review.authorName}
                   date={review.date}
