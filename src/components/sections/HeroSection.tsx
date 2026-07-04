@@ -51,12 +51,16 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-5xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight leading-[1.1]"
+          className="flex justify-center"
         >
-          Дом{" "}
-          <span className="bg-gradient-to-r from-primary-light via-primary to-accent bg-clip-text text-transparent">
-            Стоматологии
-          </span>
+          <Image
+            src="/images/logo.png"
+            alt="Дом Стоматологии"
+            width={413}
+            height={96}
+            className="h-14 md:h-20 lg:h-24 w-auto brightness-0 invert drop-shadow-lg"
+            priority
+          />
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
