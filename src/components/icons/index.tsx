@@ -38,4 +38,5 @@ export {
   GraduationCap,
   Send,
   User,
+  Headphones,
 } from "lucide-react";

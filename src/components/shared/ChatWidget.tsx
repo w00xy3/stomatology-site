@@ -2,17 +2,26 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Calendar, Phone, User } from "@/components/icons";
+import {
+  MessageCircle,
+  X,
+  Send,
+  Calendar,
+  Phone,
+  User,
+  Headphones,
+} from "@/components/icons";
 
 /* ───────────── types ───────────── */
 interface ChatMessage {
   id: string;
   text: string;
-  sender: "user" | "bot";
+  sender: "user" | "bot" | "operator";
   timestamp: number;
 }
 
 type BookingStatus = "idle" | "submitting" | "success" | "error";
+type ChatMode = "bot" | "operator";
 
 /* ───────────── bot auto-reply logic ───────────── */
 const autoReplies: { keywords: string[]; reply: string }[] = [
@@ -75,7 +84,7 @@ function getBotReply(userText: string): string {
 }
 
 /* ───────── helpers ───────── */
-function makeMsg(text: string, sender: "user" | "bot"): ChatMessage {
+function makeMsg(text: string, sender: "user" | "bot" | "operator"): ChatMessage {
   return { id: crypto.randomUUID(), text, sender, timestamp: Date.now() };
 }
 
@@ -88,10 +97,19 @@ function formatTime(epoch: number) {
 
 const quickReplies = ["Записаться на приём", "Узнать цены", "Режим работы"];
 
+const OPERATOR_HOURS = "Пн–Сб 9:00–20:00, Вс — выходной";
+
+function isOperatorOnline(): boolean {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const hour = now.getHours();
+  if (day === 0) return false; // Sunday
+  return hour >= 9 && hour < 20;
+}
+
 /* ── phone mask: +7 (XXX) XXX-XX-XX ── */
 function formatPhoneMask(value: string): string {
   const digits = value.replace(/\D/g, "");
-  /* strip leading 7 or 8 if user typed it */
   const d = digits.startsWith("7") || digits.startsWith("8") ? digits.slice(1) : digits;
 
   let result = "+7";
@@ -111,6 +129,49 @@ function rawDigits(value: string): string {
 const WELCOME_TEXT =
   "Здравствуйте! 👋 Я — виртуальный помощник «Дома Стоматологии». Задайте вопрос, и я постараюсь помочь!";
 
+/* ── notification sound via Web Audio API (no external files) ── */
+let audioCtx: AudioContext | null = null;
+let lastSoundTime = 0;
+const SOUND_DEBOUNCE_MS = 1500;
+
+function playNotificationSound() {
+  /* debounce: skip if played less than 1.5s ago */
+  const now = Date.now();
+  if (now - lastSoundTime < SOUND_DEBOUNCE_MS) return;
+  lastSoundTime = now;
+
+  try {
+    if (!audioCtx) {
+      audioCtx = new (
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      )();
+    }
+    const ctx = audioCtx;
+    /* resume if suspended (browser autoplay policy) */
+    if (ctx.state === "suspended") void ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);          /* A5 */
+    osc.frequency.setValueAtTime(1108, ctx.currentTime + 0.12);  /* C#6 */
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  } catch {
+    /* AudioContext may be blocked by browser policy — silent fail */
+  }
+}
+
+const OPERATOR_WELCOME =
+  "Вы переключились на живого оператора. 🧑‍💼\n\nНапишите ваш вопрос — оператор ответит в ближайшее время.\n\n⏳ Ожидание ответа может занять несколько минут.";
+
 /* ───────── component ───────── */
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -121,6 +182,11 @@ export default function ChatWidget() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /* ── operator mode ── */
+  const [chatMode, setChatMode] = useState<ChatMode>("bot");
+  const [sessionId] = useState(() => "sess-" + crypto.randomUUID());
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ── booking form state ── */
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -145,20 +211,120 @@ export default function ChatWidget() {
     }
   }, [isOpen, showBookingForm]);
 
-  /* ── chat send logic ── */
-  const sendText = useCallback((text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
+  /* ── operator polling ── */
+  useEffect(() => {
+    if (chatMode !== "operator" || !isOpen) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
 
-    setMessages((prev) => [...prev, makeMsg(trimmed, "user")]);
-    setInput("");
-    setIsTyping(true);
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/operator?sessionId=${sessionId}`);
+        if (!res.ok) return;
+        const data = await res.json();
 
-    setTimeout(() => {
-      setMessages((prev) => [...prev, makeMsg(getBotReply(trimmed), "bot")]);
-      setIsTyping(false);
-    }, 800 + Math.random() * 700);
+        if (data.replies?.length > 0) {
+          setIsTyping(false);
+          playNotificationSound();
+          setMessages((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const newMsgs = data.replies.filter(
+              (r: { id: string }) => !existingIds.has(r.id),
+            );
+            if (newMsgs.length === 0) return prev;
+            return [
+              ...prev,
+              ...newMsgs.map((r: { id: string; text: string; timestamp: number }) => ({
+                id: r.id,
+                text: r.text,
+                sender: "operator" as const,
+                timestamp: r.timestamp || Date.now(),
+              })),
+            ];
+          });
+        }
+      } catch {
+        /* silent — will retry on next interval */
+      }
+    };
+
+    /* poll every 4 seconds */
+    pollRef.current = setInterval(poll, 4000);
+    /* initial poll immediately */
+    poll();
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [chatMode, sessionId, isOpen]);
+
+  /* ── switch to operator mode ── */
+  const activateOperator = useCallback(() => {
+    setChatMode("operator");
+    const online = isOperatorOnline();
+    const statusText = online
+      ? "🟢 Оператор сейчас онлайн"
+      : "🔴 Оператор сейчас не в сети";
+
+    setMessages((prev) => [
+      ...prev,
+      makeMsg("Связаться с оператором", "user"),
+      makeMsg(
+        `${statusText}\n\n${OPERATOR_WELCOME}\n\n🕐 Часы работы: ${OPERATOR_HOURS}`,
+        "bot",
+      ),
+    ]);
   }, []);
+
+  /* ── chat send logic ── */
+  const sendToOperator = useCallback(async (text: string) => {
+    setIsTyping(true);
+    try {
+      await fetch("/api/operator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, text }),
+      });
+      /* clear typing after POST succeeds — real reply will re-trigger typing if needed */
+      setTimeout(() => setIsTyping(false), 1500);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        makeMsg("Не удалось отправить сообщение. Попробуйте ещё раз.", "bot"),
+      ]);
+      setIsTyping(false);
+    }
+  }, [sessionId]);
+
+  const sendText = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+
+      setMessages((prev) => [...prev, makeMsg(trimmed, "user")]);
+      setInput("");
+
+      if (chatMode === "operator") {
+        sendToOperator(trimmed);
+        return;
+      }
+
+      /* bot mode */
+      setIsTyping(true);
+      setTimeout(() => {
+        setMessages((prev) => [...prev, makeMsg(getBotReply(trimmed), "bot")]);
+        setIsTyping(false);
+      }, 800 + Math.random() * 700);
+    },
+    [chatMode, sendToOperator],
+  );
 
   const handleSend = useCallback(() => sendText(input), [input, sendText]);
 
@@ -196,7 +362,6 @@ export default function ChatWidget() {
 
       setBookingStatus("success");
 
-      /* add confirmation message to chat */
       setMessages((prev) => [
         ...prev,
         makeMsg(
@@ -205,7 +370,6 @@ export default function ChatWidget() {
         ),
       ]);
 
-      /* reset form after delay — give user time to read confirmation */
       setTimeout(() => {
         setShowBookingForm(false);
         setBookingName("");
@@ -226,6 +390,10 @@ export default function ChatWidget() {
       handleBookingSubmit();
     }
   };
+
+  /* ── get placeholder text based on mode ── */
+  const inputPlaceholder =
+    chatMode === "operator" ? "Сообщение оператору…" : "Напишите сообщение…";
 
   return (
     <>
@@ -279,9 +447,15 @@ export default function ChatWidget() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold text-sm leading-tight truncate">
-                  Дом Стоматологии
+                  {chatMode === "operator" ? "Живой оператор" : "Дом Стоматологии"}
                 </p>
-                <p className="text-white/70 text-xs">Онлайн · ответим за пару минут</p>
+                <p className="text-white/70 text-xs">
+                  {chatMode === "operator"
+                    ? isOperatorOnline()
+                      ? "Онлайн · ответим скоро"
+                      : "Не в сети · ответим в рабочее время"
+                    : "Онлайн · ответим за пару минут"}
+                </p>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -303,13 +477,22 @@ export default function ChatWidget() {
                     className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                       msg.sender === "user"
                         ? "bg-primary text-white rounded-br-md"
-                        : "bg-surface text-text-primary border border-border/60 rounded-bl-md shadow-sm"
+                        : msg.sender === "operator"
+                          ? "bg-accent-soft border border-accent/20 text-text-primary rounded-bl-md shadow-sm"
+                          : "bg-surface text-text-primary border border-border/60 rounded-bl-md shadow-sm"
                     }`}
                   >
+                    {msg.sender === "operator" && (
+                      <p className="text-[10px] font-semibold text-accent mb-1">
+                        🧑‍💼 Оператор
+                      </p>
+                    )}
                     <p className="whitespace-pre-line">{msg.text}</p>
                     <p
                       className={`text-[10px] mt-1 text-right ${
-                        msg.sender === "user" ? "text-white/60" : "text-text-muted"
+                        msg.sender === "user"
+                          ? "text-white/60"
+                          : "text-text-muted"
                       }`}
                     >
                       {formatTime(msg.timestamp)}
@@ -334,7 +517,7 @@ export default function ChatWidget() {
             </div>
 
             {/* quick replies */}
-            {messages.length <= 1 && !showBookingForm && (
+            {messages.length <= 1 && !showBookingForm && chatMode === "bot" && (
               <div className="flex gap-2 px-4 py-2 overflow-x-auto shrink-0 bg-surface border-t border-border/40">
                 {quickReplies.map((qr) => (
                   <button
@@ -345,6 +528,17 @@ export default function ChatWidget() {
                     {qr}
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* ── operator hours banner (operator mode) ── */}
+            {chatMode === "operator" && (
+              <div className="flex items-center gap-2 px-4 py-2 shrink-0 bg-accent-soft/40 border-t border-accent/20">
+                <Headphones className="w-4 h-4 text-accent shrink-0" />
+                <p className="text-xs text-text-secondary">
+                  <span className="font-medium text-accent">Живой оператор:</span>{" "}
+                  {OPERATOR_HOURS}
+                </p>
               </div>
             )}
 
@@ -459,7 +653,7 @@ export default function ChatWidget() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Напишите сообщение…"
+                  placeholder={inputPlaceholder}
                   className="flex-1 bg-background-alt rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder-text-muted outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
                 <button
@@ -472,18 +666,30 @@ export default function ChatWidget() {
                 </button>
               </div>
 
-              {/* ── always-visible booking button ── */}
-              {!showBookingForm && bookingStatus !== "success" && (
-                <div className="px-3 pb-2.5">
+              {/* ── action buttons ── */}
+              <div className="flex gap-2 px-3 pb-2.5">
+                {/* booking button */}
+                {!showBookingForm && bookingStatus !== "success" && (
                   <button
                     onClick={() => setShowBookingForm(true)}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-white text-sm font-semibold transition-all hover:bg-accent-light cursor-pointer shadow-sm hover:shadow-md hover:shadow-accent/20 active:scale-[0.98]"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-white text-sm font-semibold transition-all hover:bg-accent-light cursor-pointer shadow-sm hover:shadow-md hover:shadow-accent/20 active:scale-[0.98]"
                   >
                     <Calendar className="w-4 h-4" />
-                    Записаться на приём
+                    Записаться
                   </button>
-                </div>
-              )}
+                )}
+
+                {/* operator button (only in bot mode) */}
+                {chatMode === "bot" && (
+                  <button
+                    onClick={activateOperator}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-primary text-primary text-sm font-semibold transition-all hover:bg-primary hover:text-white cursor-pointer active:scale-[0.98]"
+                  >
+                    <Headphones className="w-4 h-4" />
+                    Оператор
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
