@@ -36,4 +36,6 @@ export {
   Wrench,
   Heart,
   GraduationCap,
+  Send,
+  User,
 } from "lucide-react";

@@ -4,6 +4,7 @@ import "./globals.css";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ChatWidget from "@/components/shared/ChatWidget";
 
 const inter = Inter({
   subsets: ["cyrillic", "latin"],
@@ -55,6 +56,7 @@ export default function RootLayout({
           <main>{children}</main>
           <Footer />
         </SmoothScroll>
+        <ChatWidget />
       </body>
     </html>
   );
